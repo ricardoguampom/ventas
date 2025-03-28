@@ -1,0 +1,34 @@
+# Laravel
+/vendor
+/node_modules
+/public/storage
+/public/hot
+/public/build
+/storage/*.key
+/storage/oauth-private.key
+/storage/oauth-public.key
+/storage/framework/cache/data
+/storage/logs
+/bootstrap/cache
+
+# Configuración de IDEs y editores
+/.vscode/
+/.idea/
+/.fleet/
+/.zed/
+/nova/
+
+# Archivos de prueba y caché
+/.phpunit.cache
+.phpunit.result.cache
+.phpactor.json
+/.phpstorm.meta.php
+
+# Archivos de dependencias y registros
+npm-debug.log
+yarn-error.log
+/auth.json
+
+# Archivos de Docker
+.dockerignore
+docker-compose.yml
