@@ -47,3 +47,23 @@ php artisan storage:link
 Luego, revisa si el enlace simbólico se creó correctamente:
 
 ls -l public/storage
+
+# Requisitos del Sistema
+
+Para ejecutar este sistema, es necesario contar con los siguientes requisitos mínimos de hardware y software:
+
+### **Requisitos de Hardware**
+- **RAM**: 16 GB
+- **Disco Duro**: 500 GB SSD
+
+### **Requisitos de Software**
+- **PHP**: 8.2.27
+- **Composer**: 2.8.4
+- **MySQL**: 8.0.30
+- **Apache**: 2.4.54
+
+### **Otros Requisitos**
+- **Sistema Operativo**: Linux, macOS o Windows (con entorno adecuado de desarrollo)
+- **Acceso a Internet**: Para descargar dependencias y actualizaciones.
+
+Asegúrate de que tu máquina cumpla con estos requisitos antes de proceder con la instalación y configuración del proyecto.
