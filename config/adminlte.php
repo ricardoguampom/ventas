@@ -69,6 +69,9 @@ return [
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
     'logo_img_alt' => 'Admin Logo',
+    'use_route_url' => true,
+    'dashboard_url' => 'sales', // 👈 la ruta name de las ventas
+
 
     /*
     |--------------------------------------------------------------------------
@@ -257,7 +260,6 @@ return [
     */
 
     'use_route_url' => false,
-    'dashboard_url' => 'home',
     'logout_url' => 'logout',
     'login_url' => 'login',
     'register_url' => 'register',

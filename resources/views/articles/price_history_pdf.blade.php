@@ -1,77 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
+
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Historial de Precios</title>
     <style>
-        /* Global Styles */
+        @page {
+            margin: 20px;
+            size: A4 portrait;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: DejaVu Sans, Helvetica, sans-serif;
             margin: 20px;
             line-height: 1.6;
+            color: #333;
+            font-size: 11px;
         }
+
         header {
             text-align: center;
             margin-bottom: 20px;
         }
+
         header h1 {
             margin: 0;
-            font-size: 20px;
-            color: #333;
-        }
-        header p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #555;
+            font-size: 18px;
+            color: #222;
         }
 
-        /* Table Styles */
+        header p {
+            margin: 3px 0;
+            font-size: 12px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
-            font-size: 12px;
         }
-        table, th, td {
-            border: 1px solid #ddd;
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
         }
+
         th {
             background-color: #007bff;
             color: white;
-            font-weight: bold;
             text-transform: uppercase;
-            padding: 10px;
+            font-size: 10px;
         }
+
         td {
-            padding: 8px;
+            font-size: 10px;
             text-align: right;
-            color: #333;
         }
+
         td:first-child, th:first-child {
             text-align: left;
         }
+
         tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        .total-row {
-            font-weight: bold;
-            background-color: #007bff;
-            color: white;
+            background-color: #f8f8f8;
         }
 
-        /* Footer Styles */
+        .total-row {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+
         .footer {
             text-align: center;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #aaa;
+            margin-top: 30px;
+            font-size: 10px;
+            color: #999;
         }
     </style>
 </head>
+
 <body>
     <header>
         <h1>Historial de Precios</h1>
@@ -85,24 +95,24 @@
         <thead>
             <tr>
                 <th>Fecha</th>
-                <th>Precio de Compra</th>
+                <th>Precio Compra</th>
                 <th>Precio Mayorista</th>
-                <th>Precio de Tienda</th>
-                <th>Precio de Factura</th>
+                <th>Precio Tienda</th>
+                <th>Precio Factura</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($priceHistory as $history)
                 <tr>
-                    <td>{{ $history->created_at->format('Y-m-d H:i:s') }}</td>
-                    <td>Bs {{ number_format($history->new_cost, 2) }}</td>
-                    <td>Bs {{ number_format($history->new_wholesale_price, 2) }}</td>
-                    <td>Bs {{ number_format($history->new_store_price, 2) }}</td>
-                    <td>Bs {{ number_format($history->new_invoice_price, 2) }}</td>
+                    <td>{{ $history->created_at->format('d/m/Y H:i') }}</td>
+                    <td>Bs {{ number_format($history->new_cost, 2, '.', ',') }}</td>
+                    <td>Bs {{ number_format($history->new_wholesale_price, 2, '.', ',') }}</td>
+                    <td>Bs {{ number_format($history->new_store_price, 2, '.', ',') }}</td>
+                    <td>Bs {{ number_format($history->new_invoice_price, 2, '.', ',') }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center;">No hay datos disponibles en el historial de precios.</td>
+                    <td colspan="5" style="text-align: center;">No hay datos en el historial de precios.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -115,7 +125,8 @@
     </table>
 
     <div class="footer">
-        <p>Documento generado automáticamente. Si tiene preguntas, comuníquese con soporte.</p>
+        Documento generado automáticamente. Para consultas contacte a soporte.
     </div>
 </body>
+
 </html>
