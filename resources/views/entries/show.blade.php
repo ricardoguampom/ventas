@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-md-4">
                     <p><strong><i class="fas fa-truck"></i> Proveedor:</strong> 
-                        {{ $entry->supplier_name ?? 'N/A' }}
+                        {{ $entry->provider->name ?? 'No registrado' }}
                     </p>
                 </div>
                 <div class="col-md-4">

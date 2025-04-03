@@ -41,7 +41,7 @@ class ArticleController extends Controller
             $query->where('new_cost', '>=', $request->min_price);
         }
     
-        $priceHistory = $query->paginate(10);
+        $priceHistory = $query->paginate(5);
         $barcodes = $article->barcodes;
     
         return view('articles.show', compact('article', 'priceHistory', 'barcodes'));
@@ -303,56 +303,58 @@ class ArticleController extends Controller
     
     public function exportAllCsv()
     {
-        $articles = Article::with('category')->get();
+        $articles = Article::with(['category', 'priceHistories' => function($q) {
+            $q->latest('changed_at'); // Solo el último historial
+        }])->get();
     
         $csvHeader = [
             'ID', 
             'Categoría', 
-            'Código', 
+            'Modelo', 
             'Nombre', 
             'Stock', 
-            'Costo', 
-            'Precio al por mayor', 
-            'Precio de tienda', 
-            'Precio de factura', 
-            'Fecha de caducidad', 
+            'Costo (Bs)', 
+            'Precio Mayorista (Bs)', 
+            'Precio Tienda (Bs)', 
+            'Precio Factura (Bs)', 
+            'Último Precio Compra (Bs)',
+            'Último Precio Mayorista (Bs)',
+            'Último Precio Tienda (Bs)',
+            'Último Precio Factura (Bs)',
+            'Fecha Expiración', 
             'Estado', 
             'Creado en'
         ];
     
-        $csvData = $articles->map(function ($article) {
-            return [
-                $article->id,
-                $article->category->name ?? 'N/A',
-                $article->code,
-                $article->name,
-                $article->stock,
-                number_format($article->cost, 2, '.', ''), // Asegurar el formato numérico
-                number_format($article->wholesale_price, 2, '.', ''),
-                number_format($article->store_price, 2, '.', ''),
-                number_format($article->invoice_price, 2, '.', ''),
-                $article->expiration_date ?? 'N/A',
-                $article->status ? 'Activo' : 'Inactivo',
-                $article->created_at->format('Y-m-d H:i:s'),
-            ];
-        });
+        $filename = 'articulos_exportados.csv';
     
-        $filename = 'all_articles.csv';
-    
-        // Utilizando un buffer de salida para crear el contenido CSV
-        $output = fopen('php://output', 'w');
         header('Content-Type: text/csv; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header("Content-Disposition: attachment; filename=\"{$filename}\"");
+        $output = fopen('php://output', 'w');
     
-        // Agregar el encabezado de BOM para UTF-8 (permite caracteres especiales en Excel)
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
-    
-        // Escribir encabezados
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
         fputcsv($output, $csvHeader);
     
-        // Escribir datos
-        foreach ($csvData as $row) {
-            fputcsv($output, $row);
+        foreach ($articles as $article) {
+            $history = $article->priceHistories->first();
+            fputcsv($output, [
+                $article->id,
+                optional($article->category)->name ?? 'Sin categoría',
+                $article->model ?? 'Sin modelo',
+                $article->name ?? 'Sin nombre',
+                $article->stock ?? 0,
+                number_format($article->cost ?? 0, 2, '.', ''),
+                number_format($article->wholesale_price ?? 0, 2, '.', ''),
+                number_format($article->store_price ?? 0, 2, '.', ''),
+                number_format($article->invoice_price ?? 0, 2, '.', ''),
+                $history ? number_format($history->new_cost, 2, '.', '') : 'N/A',
+                $history ? number_format($history->new_wholesale_price, 2, '.', '') : 'N/A',
+                $history ? number_format($history->new_store_price, 2, '.', '') : 'N/A',
+                $history ? number_format($history->new_invoice_price, 2, '.', '') : 'N/A',
+                $article->expiration_date ?? '',
+                $article->status ? 'Activo' : 'Inactivo',
+                optional($article->created_at)->format('Y-m-d H:i:s') ?? ''
+            ]);
         }
     
         fclose($output);

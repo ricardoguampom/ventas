@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('entries', function (Blueprint $table) {
             $table->id();
-            $table->string('supplier_name')->nullable();
+            $table->foreignId('provider_id')->constrained('people')->onDelete('cascade');
             $table->date('date'); // Fecha específica, sin zona horaria
             $table->decimal('total', 10, 2)->default(0);
             $table->dateTime('created_at')->nullable(); // Reemplazamos 'timestamps' por columnas manuales

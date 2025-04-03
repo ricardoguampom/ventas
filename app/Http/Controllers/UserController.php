@@ -28,7 +28,7 @@ class UserController extends Controller
                   ->orWhere('email', 'like', "%{$request->search}%");
         }
 
-        $users = $query->with('role')->orderByDesc('created_at')->paginate(10);
+        $users = $query->with('role')->orderByDesc('created_at')->paginate(5);
         return view('users.index', compact('users'));
     }
 

@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-    {{-- 🔥 Mensajes de error con SweetAlert --}}
+
     @if($errors->any())
         <script>
             document.addEventListener('DOMContentLoaded', function () {
@@ -20,14 +20,18 @@
         </script>
     @endif
 
-    {{-- 📌 Formulario de venta --}}
     <form action="{{ route('sales.store') }}" method="POST" id="sale-form">
         @csrf
 
         {{-- Cliente --}}
         <div class="form-group">
-            <label for="customer_name"><strong>Nombre del Cliente</strong></label>
-            <input type="text" name="customer_name" id="customer_name" class="form-control" placeholder="Ingrese el nombre del cliente" required>
+            <label for="client_id"><strong>Cliente</strong></label>
+            <select name="client_id" id="client_id" class="form-control select2" required>
+                <option value="" disabled selected>Seleccione un cliente</option>
+                @foreach($clients as $client)
+                    <option value="{{ $client->id }}">{{ $client->name }} - {{ $client->document_number }}</option>
+                @endforeach
+            </select>
         </div>
 
         {{-- Número de Factura --}}
@@ -42,7 +46,7 @@
             <input type="text" id="barcode" class="form-control" placeholder="Escanea el código de barras aquí" autofocus>
         </div>
 
-        {{-- 📌 Tabla de Detalles de la Venta --}}
+        {{-- Detalles --}}
         <h4 class="mt-4"><i class="fas fa-list"></i> Detalles de la Venta</h4>
         <div class="table-responsive">
             <table class="table table-bordered table-striped" id="sale-details-table">
@@ -56,9 +60,7 @@
                         <th class="text-center">Acciones</th>
                     </tr>
                 </thead>
-                <tbody>
-                    {{-- Se llenarán dinámicamente los detalles --}}
-                </tbody>
+                <tbody></tbody>
             </table>
         </div>
 
@@ -70,18 +72,18 @@
 
         {{-- Botones --}}
         <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Registrar Venta
-            </button>
-            <a href="{{ route('sales.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Volver
-            </a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Registrar Venta</button>
+            <a href="{{ route('sales.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
     </form>
+
 @endsection
 
 @section('custom_js')
 <script>
+
+    $('.select2').select2({ placeholder: "Seleccione un cliente", width: '100%' });
+
     let articles = @json($articles);
     let details = [];
 

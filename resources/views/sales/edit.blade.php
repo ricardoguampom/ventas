@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-    {{-- Mostrar mensajes de éxito y error --}}
+    {{-- Mensajes --}}
     @if(session('error'))
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
@@ -16,11 +16,7 @@
     @endif
     @if($errors->any())
         <div class="alert alert-danger">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+            <ul>@foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul>
         </div>
     @endif
 
@@ -30,8 +26,15 @@
 
         {{-- Cliente --}}
         <div class="form-group">
-            <label for="customer_name"><strong>Nombre del Cliente</strong></label>
-            <input type="text" name="customer_name" id="customer_name" class="form-control" value="{{ $sale->customer_name }}" required>
+            <label for="client_id"><strong>Cliente</strong></label>
+            <select name="client_id" id="client_id" class="form-control" required>
+                <option value="" disabled>Seleccione un cliente</option>
+                @foreach ($clients as $client)
+                    <option value="{{ $client->id }}" {{ $sale->client_id == $client->id ? 'selected' : '' }}>
+                        {{ $client->name }} - {{ $client->document_number }}
+                    </option>
+                @endforeach
+            </select>
         </div>
 
         {{-- Número de Factura --}}
@@ -46,7 +49,7 @@
             <input type="text" id="barcode" class="form-control" placeholder="Escanea el código de barras aquí" autofocus>
         </div>
 
-        {{-- Tabla de detalles --}}
+        {{-- Detalles --}}
         <h4 class="mt-4"><strong>Detalles de la Venta</strong></h4>
         <table class="table table-bordered" id="sale-details-table">
             <thead class="thead-dark">
@@ -59,9 +62,7 @@
                     <th>Acciones</th>
                 </tr>
             </thead>
-            <tbody>
-                {{-- Se llenarán dinámicamente los detalles --}}
-            </tbody>
+            <tbody></tbody>
         </table>
 
         {{-- Total --}}
@@ -72,18 +73,20 @@
 
         {{-- Botones --}}
         <div class="d-flex justify-content-between mt-3">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Actualizar Venta
-            </button>
-            <a href="{{ route('sales.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Volver
-            </a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Actualizar Venta</button>
+            <a href="{{ route('sales.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
         </div>
     </form>
 @endsection
 
 @section('custom_js')
     <script>
+        $(document).ready(function () {
+            $('#customer_id').select2({
+                placeholder: 'Seleccione un cliente',
+                width: '100%'
+            });
+        });
         document.addEventListener('DOMContentLoaded', function () {
             // Mensajes de éxito/desaparecen después de 3s
             const alerts = document.querySelectorAll('.alert');

@@ -17,11 +17,17 @@
             <input type="text" name="date" id="date" class="form-control flatpickr" required value="{{ $entry->date }}">
         </div>
 
-        {{-- 🏢 Nombre del proveedor --}}
+        {{-- ✅ Proveedor usando Select2 --}}
         <div class="form-group">
-            <label for="supplier_name"><strong>Nombre del Proveedor</strong></label>
-            <input type="text" name="supplier_name" id="supplier_name" class="form-control" 
-                   placeholder="Ingrese el nombre del proveedor" required value="{{ $entry->supplier_name }}">
+            <label for="provider_id"><strong>Proveedor</strong></label>
+            <select name="provider_id" id="provider_id" class="form-select">
+                <option value="" disabled>Seleccione un proveedor</option>
+                @foreach ($providers as $provider)
+                    <option value="{{ $provider->id }}" {{ $entry->provider_id == $provider->id ? 'selected' : '' }}>
+                        {{ $provider->name }} - {{ $provider->document_number }}
+                    </option>
+                @endforeach
+            </select>
         </div>
 
         {{-- 🏷 Código de Barras --}}
@@ -71,12 +77,18 @@
 @endsection
 
 @section('custom_js')
-
-<!-- Flatpickr -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
 <script>
+    $(function(){
+        $('#provider_id').select2({
+            placeholder: 'Seleccione un proveedor',
+            width: '100%'
+        });
+
+        flatpickr("#date", {
+            dateFormat: "Y-m-d",
+            allowInput: true
+        });
+    });
     document.addEventListener('DOMContentLoaded', function () {
         // ✅ Flatpickr para manejar fecha de ingreso
         flatpickr("#date", {

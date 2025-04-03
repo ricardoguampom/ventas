@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Cotizaciones</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid black; padding: 5px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #333; }
+        h2 { text-align: center; margin-bottom: 5px; }
+        p { text-align: center; margin-bottom: 20px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th, td { border: 1px solid #333; padding: 6px; }
+        th { background-color: #f0f0f0; }
         .total { font-weight: bold; text-align: right; }
+        .center { text-align: center; }
+        .right { text-align: right; }
     </style>
 </head>
+
 <body>
     <h2>Reporte de Cotizaciones</h2>
-    <p><strong>Desde:</strong> {{ $startDate ?? 'No definido' }} - <strong>Hasta:</strong> {{ $endDate ?? 'No definido' }}</p>
+    <p><strong>Desde:</strong> {{ $startDate ?? 'No definido' }} &nbsp;&nbsp; <strong>Hasta:</strong> {{ $endDate ?? 'No definido' }}</p>
 
     @foreach($quotations as $index => $q)
+        {{-- Cabecera de la Cotización --}}
         <table>
             <thead>
                 <tr>
-                    <th colspan="5">Cotización #{{ $index + 1 }}</th>
+                    <th colspan="5">Cotización #{{ str_pad($q->id, 6, '0', STR_PAD_LEFT) }}</th>
                 </tr>
                 <tr>
                     <th>Fecha</th>
@@ -31,31 +38,32 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>{{ $q->created_at->format('Y-m-d H:i:s') }}</td>
-                    <td>{{ $q->user->name ?? 'Desconocido' }}</td>
-                    <td>{{ $q->customer_name }}</td>
-                    <td>{{ number_format($q->total, 2) }}</td>
-                    <td>{{ ucfirst($q->status) }}</td>
+                    <td class="center">{{ $q->created_at->format('d/m/Y H:i') }}</td>
+                    <td>{{ optional($q->user)->name ?? 'Desconocido' }}</td>
+                    <td>{{ optional($q->client)->name ?? $q->customer_name ?? 'Sin Cliente' }}</td>
+                    <td class="right">{{ number_format($q->total, 2) }}</td>
+                    <td class="center">{{ ucfirst($q->status) }}</td>
                 </tr>
             </tbody>
         </table>
 
+        {{-- Detalle de Artículos --}}
         <table>
             <thead>
                 <tr>
                     <th>Artículo</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unitario (Bs)</th>
-                    <th>Subtotal (Bs)</th>
+                    <th class="center">Cantidad</th>
+                    <th class="right">Precio Unitario (Bs)</th>
+                    <th class="right">Subtotal (Bs)</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($q->details as $detail)
                     <tr>
                         <td>{{ $detail->article->name ?? 'Artículo eliminado' }}</td>
-                        <td>{{ $detail->quantity }}</td>
-                        <td>{{ number_format($detail->price, 2) }}</td>
-                        <td>{{ number_format($detail->quantity * $detail->price, 2) }}</td>
+                        <td class="center">{{ $detail->quantity }}</td>
+                        <td class="right">{{ number_format($detail->price, 2) }}</td>
+                        <td class="right">{{ number_format($detail->quantity * $detail->price, 2) }}</td>
                     </tr>
                 @endforeach
                 <tr>
@@ -67,5 +75,7 @@
 
         <hr>
     @endforeach
+
 </body>
+
 </html>

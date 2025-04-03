@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\ArticleBarcode;
-use App\Models\Category;
 use App\Models\Entry;
 use App\Models\EntryDetail;
-use Illuminate\Http\Request;
+use App\Models\Person;
 use App\Models\PriceHistory;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use RealRashid\SweetAlert\Facades\Alert;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,61 +23,36 @@ class EntryController extends Controller
         $this->middleware('check_permission:ingresos.editar')->only(['edit', 'update']);
         $this->middleware('check_permission:ingresos.eliminar')->only('destroy');
         $this->middleware('check_permission:ingresos.reporte')->only([
-            'showReportForm',
-            'exportEntries',
-            'exportEntriesToPdf',
-            'exportEntriesToCsv'
+            'showReportForm', 'exportEntries', 'exportEntriesToPdf', 'exportEntriesToCsv'
         ]);
     }
 
     public function index(Request $request)
     {
-        $articleQuery = $request->input('article_query');
-        $categoryId = $request->input('category_id');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $supplierName = $request->input('supplier_name');
-    
-        $entries = Entry::with('details.article')
-            ->when($articleQuery, function ($query) use ($articleQuery) {
-                $query->whereHas('details.article', function ($subQuery) use ($articleQuery) {
-                    $subQuery->where('name', 'like', "%{$articleQuery}%");
-                });
-            })
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->whereHas('details.article.category', function ($subQuery) use ($categoryId) {
-                    $subQuery->where('id', $categoryId);
-                });
-            })
-            ->when($startDate && $endDate, function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('date', [$startDate, $endDate]);
-            })
-            ->when($startDate && !$endDate, function ($query) use ($startDate) {
-                $query->where('date', '>=', $startDate);
-            })
-            ->when($endDate && !$startDate, function ($query) use ($endDate) {
-                $query->where('date', '<=', $endDate);
-            })
-            ->when($supplierName, function ($query) use ($supplierName) {
-                $query->where('supplier_name', 'like', "%{$supplierName}%");
-            })
+        $entries = Entry::with(['details.article', 'provider'])
+            ->when($request->article_query, fn($q) => $q->whereHas('details.article', fn($s) => $s->where('name', 'like', "%{$request->article_query}%")))
+            ->when($request->category_id, fn($q) => $q->whereHas('details.article.category', fn($s) => $s->where('id', $request->category_id)))
+            ->when($request->start_date && $request->end_date, fn($q) => $q->whereBetween('date', [$request->start_date, $request->end_date]))
+            ->when($request->start_date && !$request->end_date, fn($q) => $q->where('date', '>=', $request->start_date))
+            ->when($request->end_date && !$request->start_date, fn($q) => $q->where('date', '<=', $request->end_date))
+            ->when($request->supplier_name, fn($q) => $q->whereHas('provider', fn($s) => $s->where('name', 'like', "%{$request->supplier_name}%")))
             ->orderBy('date', 'desc')
-            ->paginate(10);    
+            ->paginate(5);
         return view('entries.index', compact('entries'));
     }
-    
 
     public function create()
     {
         $articles = Article::with('barcodes')->get();
-        return view('entries.create', compact('articles'));
+        $providers = Person::where('type', 'provider')->get();
+        return view('entries.create', compact('articles', 'providers'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'date' => 'required|date',
-            'supplier_name' => 'nullable|string|max:255',
+            'provider_id' => 'required|exists:people,id',
             'details' => 'required|json',
         ]);
 
@@ -86,17 +61,13 @@ class EntryController extends Controller
         try {
             DB::transaction(function () use ($request, $details) {
                 $entry = Entry::create([
-                    'supplier_name' => $request->supplier_name,
+                    'provider_id' => $request->provider_id,
                     'date' => $request->date,
                     'total' => array_sum(array_column($details, 'subtotal')),
                 ]);
 
                 foreach ($details as $detail) {
-                    $article = Article::find($detail['article_id']);
-                    if (!$article) {
-                        throw new \Exception("Artículo no encontrado.");
-                    }
-
+                    $article = Article::findOrFail($detail['article_id']);
                     $article->increment('stock', $detail['quantity']);
 
                     if (!empty($detail['barcodes'])) {
@@ -108,7 +79,18 @@ class EntryController extends Controller
                         }
                     }
 
+                    EntryDetail::create([
+                        'entry_id' => $entry->id,
+                        'article_id' => $article->id,
+                        'quantity' => $detail['quantity'],
+                        'price' => $detail['price'],
+                        'wholesale_price' => $detail['wholesale_price'] ?? 0,
+                        'store_price' => $detail['store_price'] ?? 0,
+                        'invoice_price' => $detail['invoice_price'] ?? 0,
+                    ]);
+
                     PriceHistory::create([
+                        'entry_id' => $entry->id,
                         'article_id' => $article->id,
                         'old_cost' => $article->cost,
                         'new_cost' => $detail['price'],
@@ -118,6 +100,7 @@ class EntryController extends Controller
                         'new_store_price' => $detail['store_price'],
                         'old_invoice_price' => $article->invoice_price,
                         'new_invoice_price' => $detail['invoice_price'],
+                        'changed_at' => now(),
                     ]);
 
                     $article->update([
@@ -126,123 +109,43 @@ class EntryController extends Controller
                         'store_price' => $detail['store_price'],
                         'invoice_price' => $detail['invoice_price'],
                     ]);
-
-                    EntryDetail::create([
-                        'entry_id' => $entry->id,
-                        'article_id' => $detail['article_id'],
-                        'quantity' => $detail['quantity'],
-                        'price' => $detail['price'],
-                        'wholesale_price' => $detail['wholesale_price'] ?? 0,
-                        'store_price' => $detail['store_price'] ?? 0,
-                        'invoice_price' => $detail['invoice_price'] ?? 0,
-                    ]);
                 }
             });
 
             Alert::success('Éxito', '¡Entrada creada con éxito!');
             return redirect()->route('entries.index');
+
         } catch (\Exception $e) {
             Alert::error('Error', 'Error al registrar la entrada: ' . $e->getMessage());
             return redirect()->back()->withInput();
         }
     }
-    
-    /**
-     * Registrar cambios en los precios.
-     */
-    private function registerPriceChange(Article $article, $priceType, $newPrice)
-    {
-        $oldPrice = $article->$priceType;
-    
-        if ($oldPrice != $newPrice) {
-            PriceHistory::create([
-                'article_id' => $article->id,
-                'old_price' => $oldPrice,
-                'new_price' => $newPrice,
-                'price_type' => $priceType,
-                'changed_at' => now(),
-            ]);
-        }
-    }
 
     public function edit(Entry $entry)
     {
-        // Cargar los detalles del ingreso con los artículos relacionados
         $entry->load('details.article');
-    
-        // Cargar todos los artículos disponibles, igual que en create
         $articles = Article::with('barcodes')->get();
-        return view('entries.edit', compact('entry', 'articles'));
+        $providers = Person::where('type', 'provider')->get();
+        return view('entries.edit', compact('entry', 'articles', 'providers'));
     }
-    
+
     public function update(Request $request, Entry $entry)
     {
         try {
             DB::transaction(function () use ($request, $entry) {
-                // ✅ Decode 'details' JSON string if necessary
                 $details = is_string($request->details) ? json_decode($request->details, true) : $request->details;
-    
-                if (!is_array($details)) {
-                    throw new \Exception("Invalid details format: Expected an array but received " . gettype($details));
-                }
-    
-                // ✅ Validate request
-                $request->merge(['details' => $details]);
-                $request->validate([
-                    'date' => 'required|date',
-                    'supplier_name' => 'nullable|string|max:255',
-                    'details' => 'required|array',
-                    'details.*.article_id' => 'required|exists:articles,id',
-                    'details.*.quantity' => 'required|integer|min:1',
-                    'details.*.price' => 'required|numeric|min:0',
-                    'details.*.wholesale_price' => 'required|numeric|min:0',
-                    'details.*.store_price' => 'required|numeric|min:0',
-                    'details.*.invoice_price' => 'required|numeric|min:0',
-                ]);
-    
-                // ✅ Get existing entry details
+                if (!is_array($details)) throw new \Exception("Invalid details format");
+
                 $existingDetails = $entry->details->keyBy('article_id');
-    
-                // ✅ Adjust stock for removed items
+
                 foreach ($existingDetails as $articleId => $oldDetail) {
                     $newDetail = collect($details)->firstWhere('article_id', $articleId);
                     $article = Article::findOrFail($articleId);
-    
+
                     if ($newDetail) {
-                        // 🔹 Capture old prices **before** updating the article
-                        $oldPrices = [
-                            'cost' => $article->cost,
-                            'wholesale_price' => $article->wholesale_price,
-                            'store_price' => $article->store_price,
-                            'invoice_price' => $article->invoice_price,
-                        ];
-    
-                        // 🔹 Update existing details and stock adjustment
                         $stockDifference = $newDetail['quantity'] - $oldDetail->quantity;
                         $article->increment('stock', $stockDifference);
-    
-                        // 🔥 **Ensure Price History Records Old & New Prices**
-                        if (
-                            $article->cost != $newDetail['price'] ||
-                            $article->wholesale_price != $newDetail['wholesale_price'] ||
-                            $article->store_price != $newDetail['store_price'] ||
-                            $article->invoice_price != $newDetail['invoice_price']
-                        ) {
-                            PriceHistory::create([
-                                'article_id' => $article->id,
-                                'old_cost' => $oldPrices['cost'], // ✅ Capturing old cost
-                                'new_cost' => $newDetail['price'], // ✅ Capturing new cost
-                                'old_wholesale_price' => $oldPrices['wholesale_price'],
-                                'new_wholesale_price' => $newDetail['wholesale_price'],
-                                'old_store_price' => $oldPrices['store_price'],
-                                'new_store_price' => $newDetail['store_price'],
-                                'old_invoice_price' => $oldPrices['invoice_price'],
-                                'new_invoice_price' => $newDetail['invoice_price'],
-                                'changed_at' => now(),
-                            ]);
-                        }
-    
-                        // 🔹 Update entry detail record
+
                         $oldDetail->update([
                             'quantity' => $newDetail['quantity'],
                             'price' => $newDetail['price'],
@@ -250,8 +153,22 @@ class EntryController extends Controller
                             'store_price' => $newDetail['store_price'],
                             'invoice_price' => $newDetail['invoice_price'],
                         ]);
-    
-                        // 🔹 Ensure article price is updated
+
+                        PriceHistory::updateOrCreate(
+                            ['entry_id' => $entry->id, 'article_id' => $article->id],
+                            [
+                                'old_cost' => $article->cost,
+                                'new_cost' => $newDetail['price'],
+                                'old_wholesale_price' => $article->wholesale_price,
+                                'new_wholesale_price' => $newDetail['wholesale_price'],
+                                'old_store_price' => $article->store_price,
+                                'new_store_price' => $newDetail['store_price'],
+                                'old_invoice_price' => $article->invoice_price,
+                                'new_invoice_price' => $newDetail['invoice_price'],
+                                'changed_at' => now(),
+                            ]
+                        );
+
                         $article->update([
                             'cost' => $newDetail['price'],
                             'wholesale_price' => $newDetail['wholesale_price'],
@@ -259,26 +176,16 @@ class EntryController extends Controller
                             'invoice_price' => $newDetail['invoice_price'],
                         ]);
                     } else {
-                        // 🔹 Remove item if it's not in the new request
                         $article->decrement('stock', $oldDetail->quantity);
                         $oldDetail->delete();
+                        PriceHistory::where(['entry_id' => $entry->id, 'article_id' => $article->id])->delete();
                     }
                 }
-    
-                // ✅ Process new items
+
                 foreach ($details as $detail) {
                     if (!isset($existingDetails[$detail['article_id']])) {
                         $article = Article::findOrFail($detail['article_id']);
-    
-                        // 🔹 Capture old prices **before** updating the article
-                        $oldPrices = [
-                            'cost' => $article->cost,
-                            'wholesale_price' => $article->wholesale_price,
-                            'store_price' => $article->store_price,
-                            'invoice_price' => $article->invoice_price,
-                        ];
-    
-                        // 🔹 Create new entry detail
+
                         EntryDetail::create([
                             'entry_id' => $entry->id,
                             'article_id' => $detail['article_id'],
@@ -288,25 +195,23 @@ class EntryController extends Controller
                             'store_price' => $detail['store_price'],
                             'invoice_price' => $detail['invoice_price'],
                         ]);
-    
-                        // 🔹 Update stock
+
                         $article->increment('stock', $detail['quantity']);
-    
-                        // 🔥 **Ensure Price History Records Old & New Prices**
+
                         PriceHistory::create([
+                            'entry_id' => $entry->id,
                             'article_id' => $article->id,
-                            'old_cost' => $oldPrices['cost'], // ✅ Corrected field name
-                            'new_cost' => $detail['price'], // ✅ Corrected field name
-                            'old_wholesale_price' => $oldPrices['wholesale_price'],
+                            'old_cost' => $article->cost,
+                            'new_cost' => $detail['price'],
+                            'old_wholesale_price' => $article->wholesale_price,
                             'new_wholesale_price' => $detail['wholesale_price'],
-                            'old_store_price' => $oldPrices['store_price'],
+                            'old_store_price' => $article->store_price,
                             'new_store_price' => $detail['store_price'],
-                            'old_invoice_price' => $oldPrices['invoice_price'],
+                            'old_invoice_price' => $article->invoice_price,
                             'new_invoice_price' => $detail['invoice_price'],
                             'changed_at' => now(),
                         ]);
-    
-                        // 🔹 Ensure new article gets correct prices
+
                         $article->update([
                             'cost' => $detail['price'],
                             'wholesale_price' => $detail['wholesale_price'],
@@ -315,32 +220,26 @@ class EntryController extends Controller
                         ]);
                     }
                 }
-    
-                // ✅ Update entry info
+
                 $entry->update([
                     'date' => $request->date,
-                    'supplier_name' => $request->supplier_name,
+                    'provider_id' => $request->provider_id,
                     'total' => array_sum(array_map(fn($d) => $d['quantity'] * $d['price'], $details)),
                 ]);
             });
-    
+
             Alert::success('Éxito', '¡Entrada actualizada con éxito!');
             return redirect()->route('entries.index');
-    
+
         } catch (\Exception $e) {
             Alert::error('Error', 'Error al actualizar la entrada: ' . $e->getMessage());
             return redirect()->back()->withInput();
         }
     }
-    
-    
-    
-    
+
     public function show(Entry $entry)
     {
-        // Cargar detalles del ingreso junto con los artículos
-        $entry->load('details.article');
-
+        $entry->load(['details.article', 'provider']);
         return view('entries.show', compact('entry'));
     }
 
@@ -352,87 +251,90 @@ class EntryController extends Controller
                     $article = $detail->article;
                     $article->decrement('stock', $detail->quantity);
                     $detail->delete();
+                    PriceHistory::where(['entry_id' => $entry->id, 'article_id' => $article->id])->delete();
                 }
                 $entry->delete();
             });
 
             Alert::success('Eliminado', '¡Entrada eliminada con éxito!');
             return redirect()->route('entries.index');
+
         } catch (\Exception $e) {
             Alert::error('Error', 'Error al eliminar la entrada: ' . $e->getMessage());
             return redirect()->route('entries.index');
         }
     }
+
     public function showReportForm()
     {
         return view('entries.report');
     }
-    
+
     public function exportEntries(Request $request)
     {
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
-        $format = $request->input('format', 'pdf'); // Por defecto, PDF
+        $format = $request->input('format', 'pdf');
 
         $entries = Entry::with('details.article')
             ->whereBetween('date', [$startDate, $endDate])
             ->orderBy('date', 'desc')
             ->get();
 
-        if ($format === 'pdf') {
-            return $this->exportEntriesToPdf($entries, $startDate, $endDate);
-        } elseif ($format === 'csv') {
-            return $this->exportEntriesToCsv($entries, $startDate, $endDate);
-        }
-
-        return redirect()->back()->with('error', 'Formato no válido.');
+        return $format === 'pdf'
+            ? $this->exportEntriesToPdf($entries, $startDate, $endDate)
+            : $this->exportEntriesToCsv($entries, $startDate, $endDate);
     }
 
     public function exportEntriesToPdf($entries, $startDate, $endDate)
     {
         $totalInvestment = $entries->sum('total');
-
         $pdf = Pdf::loadView('entries.entries_report_pdf', compact('entries', 'startDate', 'endDate', 'totalInvestment'));
-
         return $pdf->download("reporte_ingresos_{$startDate}_{$endDate}.pdf");
     }
 
     public function exportEntriesToCsv($entries, $startDate, $endDate)
     {
         $filename = "reporte_ingresos_{$startDate}_{$endDate}.csv";
-
-        $csvHeader = [
-            'Fecha de Ingreso', 'Proveedor', 'Artículo', 'Cantidad', 'Precio Unitario', 'Subtotal'
-        ];
-
+        $csvHeader = ['Ingreso #', 'Fecha de Ingreso', 'Proveedor', 'Artículo', 'Cantidad', 'Precio Unitario (Bs)', 'Subtotal (Bs)'];
         $csvData = [];
+    
         foreach ($entries as $entry) {
+            $entryTotal = 0;
+    
             foreach ($entry->details as $detail) {
+                $subtotal = $detail->quantity * $detail->price;
+                $entryTotal += $subtotal;
+    
                 $csvData[] = [
+                    $entry->id,
                     $entry->date,
-                    $entry->supplier_name ?? 'N/A',
+                    optional($entry->provider)->name ?? 'Sin proveedor',
                     $detail->article->name ?? 'Artículo desconocido',
                     $detail->quantity,
                     number_format($detail->price, 2, '.', ''),
-                    number_format($detail->quantity * $detail->price, 2, '.', ''),
+                    number_format($subtotal, 2, '.', ''),
                 ];
             }
+    
+            // Fila de total por ingreso
+            $csvData[] = [
+                '', '', '', 'TOTAL DEL INGRESO', '', '', number_format($entryTotal, 2, '.', '')
+            ];
         }
-
+    
+        // Generación del CSV
         $handle = fopen('php://output', 'w');
         header('Content-Type: text/csv; charset=UTF-8');
         header("Content-Disposition: attachment; filename={$filename}");
-
-        // Encabezado BOM para caracteres especiales
-        fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
-
+        fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM UTF-8
+    
         fputcsv($handle, $csvHeader);
-
         foreach ($csvData as $row) {
             fputcsv($handle, $row);
         }
-
         fclose($handle);
         exit;
     }
+    
 }

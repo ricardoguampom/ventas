@@ -58,7 +58,7 @@
                         <tr id="entry-row-{{ $entry->id }}">
                             <td>{{ $entry->id }}</td>
                             <td>{{ \Carbon\Carbon::parse($entry->date)->format('d-m-Y') }}</td>
-                            <td>{{ $entry->supplier_name ?? 'N/A' }}</td>
+                            <td>{{ $entry->provider->name ?? 'Sin proveedor' }}</td>
                             <td>Bs {{ number_format($entry->total, 2) }}</td>
                             <td class="text-center">
                                 @perm('ingresos.ver')
@@ -125,9 +125,6 @@
 @endsection
 
 @section('custom_js')
-<!-- Flatpickr -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         flatpickr(".flatpickr", { dateFormat: "Y-m-d", allowInput: true });

@@ -14,17 +14,19 @@ return new class extends Migration
         Schema::create('price_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('article_id')->constrained('articles')->onDelete('cascade');
-            $table->decimal('old_cost', 10, 2)->nullable(); // Precio de compra anterior
-            $table->decimal('new_cost', 10, 2)->nullable(); // Precio de compra nuevo
+            $table->foreignId('entry_id')->nullable()->constrained('entries')->onDelete('cascade');
+            $table->decimal('old_cost', 10, 2)->nullable();
+            $table->decimal('new_cost', 10, 2)->nullable();
             $table->decimal('old_wholesale_price', 10, 2)->nullable();
             $table->decimal('new_wholesale_price', 10, 2)->nullable();
             $table->decimal('old_store_price', 10, 2)->nullable();
             $table->decimal('new_store_price', 10, 2)->nullable();
             $table->decimal('old_invoice_price', 10, 2)->nullable();
             $table->decimal('new_invoice_price', 10, 2)->nullable();
-            $table->dateTime('changed_at')->nullable(); // Cambiamos 'timestamp' por 'datetime'
-            $table->dateTime('created_at')->nullable(); // Reemplazamos 'timestamps' por columnas manuales
-            $table->dateTime('updated_at')->nullable(); // Reemplazamos 'timestamps' por columnas manuales
+            $table->dateTime('changed_at')->nullable();
+            $table->timestamps(); // Reemplaza los manuales created_at y updated_at por convenciones de Laravel
+
+            $table->unique(['entry_id', 'article_id']); // Garantiza único registro por combinación
         });
     }
 

@@ -13,50 +13,48 @@
         }
 
         body {
-            font-family: DejaVu Sans, Helvetica, sans-serif;
+            font-family: DejaVu Sans, Arial, Helvetica, sans-serif;
             margin: 20px;
-            line-height: 1.6;
+            line-height: 1.5;
             color: #333;
-            font-size: 11px;
+            font-size: 10px;
         }
 
         header {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         header h1 {
-            margin: 0;
             font-size: 18px;
-            color: #222;
+            margin: 0;
+            color: #2c3e50;
         }
 
         header p {
-            margin: 3px 0;
-            font-size: 12px;
+            margin: 2px 0;
+            font-size: 11px;
+            color: #555;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 15px;
         }
 
         th, td {
             border: 1px solid #ccc;
             padding: 5px;
+            font-size: 9px;
+            text-align: right;
         }
 
         th {
-            background-color: #007bff;
+            background-color: #34495e;
             color: white;
             text-transform: uppercase;
-            font-size: 10px;
-        }
-
-        td {
-            font-size: 10px;
-            text-align: right;
+            font-size: 9px;
         }
 
         td:first-child, th:first-child {
@@ -64,20 +62,22 @@
         }
 
         tr:nth-child(even) {
-            background-color: #f8f8f8;
+            background-color: #f9f9f9;
         }
 
         .total-row {
-            background-color: #007bff;
+            background-color: #34495e;
             color: #fff;
             font-weight: bold;
         }
 
         .footer {
             text-align: center;
-            margin-top: 30px;
-            font-size: 10px;
-            color: #999;
+            margin-top: 25px;
+            font-size: 9px;
+            color: #777;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
         }
     </style>
 </head>
@@ -86,9 +86,9 @@
     <header>
         <h1>Historial de Precios</h1>
         <p><strong>Artículo:</strong> {{ $article->name }}</p>
-        <p><strong>Categoría:</strong> {{ $article->category->name }}</p>
-        <p><strong>Modelo:</strong> {{ $article->model ?? 'N/A' }}</p>
-        <p><strong>Generado el:</strong> {{ now()->format('Y-m-d H:i:s') }}</p>
+        <p><strong>Categoría:</strong> {{ $article->category->name ?? 'Sin Categoría' }}</p>
+        <p><strong>Modelo:</strong> {{ $article->model ?? 'No especificado' }}</p>
+        <p><strong>Generado el:</strong> {{ now()->format('d/m/Y H:i:s') }}</p>
     </header>
 
     <table>
@@ -112,7 +112,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center;">No hay datos en el historial de precios.</td>
+                    <td colspan="5" style="text-align: center;">No hay registros disponibles.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -125,7 +125,7 @@
     </table>
 
     <div class="footer">
-        Documento generado automáticamente. Para consultas contacte a soporte.
+        Documento generado automáticamente - {{ config('app.name') }} | {{ date('Y') }}
     </div>
 </body>
 

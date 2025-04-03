@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Sale;
 use App\Models\SaleDetail;
 use App\Models\Article;
+use App\Models\Person;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Response;
 use RealRashid\SweetAlert\Facades\Alert;
+use Carbon\Carbon;
 
 class SaleController extends Controller
 {
@@ -33,7 +35,7 @@ class SaleController extends Controller
     public function index(Request $request)
     {
         $sales = Sale::with('details.article')
-            ->when($request->customer_name, fn($q) => $q->where('customer_name', 'like', "%{$request->customer_name}%"))
+            ->when($request->customer_name, fn($q) => $q->whereHas('client', fn($c) => $c->where('name', 'like', "%{$request->customer_name}%")))
             ->when($request->invoice_number, fn($q) => $q->where('invoice_number', 'like', "%{$request->invoice_number}%"))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->start_date && $request->end_date, function ($q) use ($request) {
@@ -42,7 +44,7 @@ class SaleController extends Controller
                     date('Y-m-d 23:59:59', strtotime($request->end_date))
                 ]);
             })
-            ->paginate(10);
+            ->paginate(5);
 
         return view('sales.index', compact('sales'));
     }
@@ -51,7 +53,8 @@ class SaleController extends Controller
     {
         $articles = Article::with('barcodes')->get(); // 🔥 Cargar TODOS los artículos
         $invoiceNumber = Sale::generateInvoiceNumber();
-        return view('sales.create', compact('articles', 'invoiceNumber'));
+        $clients = Person::where('type', 'client')->get();
+        return view('sales.create', compact('articles', 'invoiceNumber', 'clients'));
     }
     
 
@@ -65,7 +68,7 @@ class SaleController extends Controller
             }
     
             $request->validate([
-                'customer_name' => 'required|string|max:255',
+                'client_id' => 'required|exists:people,id',
                 'invoice_number' => 'required|string|unique:sales,invoice_number|max:50',
                 'total' => 'required|numeric|min:0',
             ], [
@@ -76,7 +79,7 @@ class SaleController extends Controller
             DB::transaction(function () use ($request, $details) {
                 $sale = Sale::create([
                     'user_id' => Auth::id(),
-                    'customer_name' => $request->customer_name,
+                    'client_id' => $request->client_id,
                     'invoice_number' => $request->invoice_number,
                     'total' => $request->total,
                     'status' => 'pending',
@@ -109,7 +112,8 @@ class SaleController extends Controller
     {
         $sale->load('details.article.barcodes'); // Cargar detalles con artículos y códigos de barras
         $articles = Article::with('barcodes')->where('status', 1)->get();
-    
+        $clients = Person::where('type', 'client')->get();
+
         // Formatear detalles para la tabla dinámica
         $saleDetails = $sale->details->map(function ($detail) {
             return [
@@ -126,7 +130,7 @@ class SaleController extends Controller
             ];
         });
     
-        return view('sales.edit', compact('sale', 'articles', 'saleDetails'));
+        return view('sales.edit', compact('sale', 'articles', 'saleDetails','clients'));
     }
     
     public function update(Request $request, Sale $sale)
@@ -134,7 +138,7 @@ class SaleController extends Controller
         try {
             // ✅ Validación del formulario
             $validatedData = $request->validate([
-                'customer_name' => 'required|string|max:255',
+                'client_id' => 'required|exists:people,id',
                 'invoice_number' => 'required|string|max:255',
                 'total' => 'required|numeric|min:0',
                 'details' => 'required|string', // Se decodifica manualmente
@@ -162,7 +166,7 @@ class SaleController extends Controller
             DB::transaction(function () use ($sale, $validatedData, $details) {
                 // ✅ Actualizar información de la venta (independiente de cotización o venta)
                 $sale->update([
-                    'customer_name' => $validatedData['customer_name'],
+                    'client_id' => $validatedData['client_id'],
                     'invoice_number' => $validatedData['invoice_number'],
                     'total' => $validatedData['total'],
                 ]);
@@ -377,115 +381,152 @@ class SaleController extends Controller
             'format' => 'required|in:pdf,csv'
         ]);
     
-        $startDate = $request->start_date;
-        $endDate = $request->end_date;
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate   = Carbon::parse($request->end_date)->endOfDay();
     
-        // 📌 Obtener ventas "paid" con detalles y usuario
-        $sales = \App\Models\Sale::with(['details.article', 'user'])
+        $sales = Sale::with(['details.article', 'user', 'client'])
             ->where('status', 'paid')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'asc')
             ->get();
     
-        // 📌 Calcular total de ventas pagadas y cantidad
         $totalSalesAmount = $sales->sum('total');
         $totalSalesCount = $sales->count();
     
         if ($request->format === 'pdf') {
-            // 📄 Generar PDF con desglose y usuario
             $pdf = Pdf::loadView('sales.report_pdf', compact('sales', 'startDate', 'endDate', 'totalSalesAmount', 'totalSalesCount'));
-            return $pdf->download("reporte_ventas_{$startDate}_{$endDate}.pdf");
+            return $pdf->download("reporte_ventas_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.pdf");
         } else {
-            // 📊 Generar CSV con detalles y usuario
-            $csvFileName = "reporte_ventas_{$startDate}_{$endDate}.csv";
+            // CSV
             $csvHeader = ['#', 'Fecha', 'Cliente', 'Factura', 'Usuario', 'Artículo', 'Cantidad', 'Precio Unitario', 'Subtotal', 'Total Venta'];
-    
             $csvData = [];
             $counter = 1;
+    
             foreach ($sales as $sale) {
                 foreach ($sale->details as $detail) {
                     $csvData[] = [
-                        $counter++, // ✅ ID de conteo en lugar del ID de venta
-                        $sale->created_at,
-                        $sale->customer_name,
+                        $counter++,
+                        $sale->created_at->format('d/m/Y H:i:s'),
+                        $sale->client->name ?? $sale->customer_name ?? 'Sin cliente',
                         $sale->invoice_number,
-                        $sale->user->name, // ✅ Nombre del usuario que realizó la venta
-                        $detail->article->name,
+                        $sale->user->name ?? '-',
+                        $detail->article->name ?? 'Artículo eliminado',
                         $detail->quantity,
-                        number_format($detail->price, 2, '.', ','),
-                        number_format($detail->quantity * $detail->price, 2, '.', ','),
-                        number_format($sale->total, 2, '.', ','),
+                        number_format($detail->price, 2, '.', ''),
+                        number_format($detail->quantity * $detail->price, 2, '.', ''),
+                        number_format($sale->total, 2, '.', ''),
                     ];
                 }
             }
     
-            // 📌 Crear CSV
-            $handle = fopen('php://output', 'w');
+            $filename = "reporte_ventas_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.csv";
+            $output = fopen('php://output', 'w');
             header('Content-Type: text/csv; charset=UTF-8');
-            header('Content-Disposition: attachment; filename="' . $csvFileName . '"');
-    
-            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM para compatibilidad con Excel
-            fputcsv($handle, $csvHeader);
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+            fputcsv($output, $csvHeader);
             foreach ($csvData as $row) {
-                fputcsv($handle, $row);
+                fputcsv($output, $row);
             }
-            fclose($handle);
+            fclose($output);
             exit;
         }
     }
+    
     public function exportQuotations(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $format = $request->input('format');
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'format' => 'required|in:pdf,csv'
+        ]);
+    
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate   = Carbon::parse($request->end_date)->endOfDay();
     
         $quotations = Sale::where('is_quotation', true)
-            ->where('status', 'pending') 
-            ->when($startDate, fn($query, $startDate) => $query->whereDate('created_at', '>=', $startDate))
-            ->when($endDate, fn($query, $endDate) => $query->whereDate('created_at', '<=', $endDate))
-            ->with(['user', 'details.article'])
+            ->where('status', 'pending')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->with(['user', 'client', 'details.article'])
+            ->orderBy('created_at', 'asc')
             ->get();
     
-        if ($format === 'pdf') {
+        if ($request->format === 'pdf') {
             $pdf = Pdf::loadView('sales.quotations_pdf', compact('quotations', 'startDate', 'endDate'));
-            return $pdf->download('reporte_cotizaciones.pdf');
-        } elseif ($format === 'csv') {
-            return $this->exportQuotationsCsv($quotations);
+            return $pdf->download("reporte_cotizaciones_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.pdf");
+        } elseif ($request->format === 'csv') {
+            return $this->exportQuotationsCsv($quotations, $startDate, $endDate);
         }
     }
-
+    
+    
     public function exportPendingSales(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
-        $format = $request->input('format');
-
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'format' => 'required|in:pdf,csv'
+        ]);
+    
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate   = Carbon::parse($request->end_date)->endOfDay();
+    
         $pendingSales = Sale::where('is_quotation', false)
             ->where('status', 'pending')
-            ->when($startDate, fn($query, $startDate) => $query->whereDate('created_at', '>=', $startDate))
-            ->when($endDate, fn($query, $endDate) => $query->whereDate('created_at', '<=', $endDate))
-            ->with(['user', 'details.article'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->with(['user', 'client', 'details.article'])
+            ->orderBy('created_at', 'asc')
             ->get();
-
-        if ($format === 'pdf') {
+    
+        if ($request->format === 'pdf') {
             $pdf = Pdf::loadView('sales.pending_sales_pdf', compact('pendingSales', 'startDate', 'endDate'));
-            return $pdf->download('reporte_ventas_pendientes.pdf');
-        } elseif ($format === 'csv') {
-            return $this->exportPendingSalesCsv($pendingSales);
+            return $pdf->download("reporte_ventas_pendientes_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.pdf");
+        } elseif ($request->format === 'csv') {
+            // CSV
+            $csvHeader = ['Fecha', 'Usuario', 'Cliente', 'Artículo', 'Cantidad', 'Precio Unitario (Bs)', 'Subtotal (Bs)', 'Total Venta (Bs)'];
+            $csvData = [];
+    
+            foreach ($pendingSales as $sale) {
+                foreach ($sale->details as $detail) {
+                    $csvData[] = [
+                        $sale->created_at->format('Y-m-d H:i:s'),
+                        $sale->user->name ?? 'Desconocido',
+                        $sale->client->name ?? 'Sin cliente',
+                        $detail->article->name ?? 'Artículo eliminado',
+                        $detail->quantity,
+                        number_format($detail->price, 2, '.', ''),
+                        number_format($detail->quantity * $detail->price, 2, '.', ''),
+                        number_format($sale->total, 2, '.', ''),
+                    ];
+                }
+            }
+    
+            $filename = "reporte_ventas_pendientes_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.csv";
+            $output = fopen('php://output', 'w');
+            header('Content-Type: text/csv; charset=UTF-8');
+            header("Content-Disposition: attachment; filename=\"$filename\"");
+            fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+            fputcsv($output, $csvHeader);
+            foreach ($csvData as $row) {
+                fputcsv($output, $row);
+            }
+            fclose($output);
+            exit;
         }
     }
+    
 
     private function exportPendingSalesCsv($pendingSales)
     {
         $csvHeader = ['Fecha', 'Usuario', 'Cliente', 'Artículo', 'Cantidad', 'Precio Unitario (Bs)', 'Subtotal (Bs)', 'Total Venta (Bs)'];
         $csvData = [];
-
+    
         foreach ($pendingSales as $sale) {
             foreach ($sale->details as $detail) {
                 $csvData[] = [
                     $sale->created_at->format('Y-m-d H:i:s'),
                     $sale->user->name ?? 'Desconocido',
-                    $sale->customer_name,
+                    $sale->client->name ?? 'Sin cliente',
                     $detail->article->name ?? 'Artículo eliminado',
                     $detail->quantity,
                     number_format($detail->price, 2, '.', ''),
@@ -494,12 +535,12 @@ class SaleController extends Controller
                 ];
             }
         }
-
+    
         $filename = 'reporte_ventas_pendientes.csv';
         $output = fopen('php://output', 'w');
         header('Content-Type: text/csv; charset=UTF-8');
         header("Content-Disposition: attachment; filename=\"$filename\"");
-
+    
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
         fputcsv($output, $csvHeader);
         foreach ($csvData as $row) {
@@ -509,12 +550,13 @@ class SaleController extends Controller
         exit;
     }
     
+    
     /**
      * Exportar cotizaciones en formato CSV con detalles.
      */
-    private function exportQuotationsCsv($quotations)
+    private function exportQuotationsCsv($quotations, $startDate, $endDate)
     {
-        $csvHeader = ['Fecha', 'Usuario', 'Cliente', 'Artículo', 'Cantidad', 'Precio Unitario (Bs)', 'Subtotal (Bs)', 'Total Cotización (Bs)'];
+        $csvHeader = ['Fecha', 'Usuario', 'Cliente', 'Documento', 'Artículo', 'Cantidad', 'Precio Unitario (Bs)', 'Subtotal (Bs)', 'Total Cotización (Bs)'];
         $csvData = [];
     
         foreach ($quotations as $q) {
@@ -522,7 +564,8 @@ class SaleController extends Controller
                 $csvData[] = [
                     $q->created_at->format('Y-m-d H:i:s'),
                     $q->user->name ?? 'Desconocido',
-                    $q->customer_name,
+                    optional($q->client)->name ?? $q->customer_name ?? 'Sin cliente',
+                    optional($q->client)->document_number ?? '-',
                     $detail->article->name ?? 'Artículo eliminado',
                     $detail->quantity,
                     number_format($detail->price, 2, '.', ''),
@@ -532,12 +575,11 @@ class SaleController extends Controller
             }
         }
     
-        $filename = 'reporte_cotizaciones.csv';
+        $filename = "reporte_cotizaciones_{$startDate->format('Ymd')}_{$endDate->format('Ymd')}.csv";
         $output = fopen('php://output', 'w');
         header('Content-Type: text/csv; charset=UTF-8');
         header("Content-Disposition: attachment; filename=\"$filename\"");
-    
-        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // BOM para UTF-8
+        fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
         fputcsv($output, $csvHeader);
         foreach ($csvData as $row) {
             fputcsv($output, $row);
@@ -545,5 +587,6 @@ class SaleController extends Controller
         fclose($output);
         exit;
     }
+    
     
 }

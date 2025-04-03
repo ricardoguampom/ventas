@@ -6,16 +6,19 @@
     <title>Reporte de Ventas Pendientes</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: DejaVu Sans, sans-serif;
+            font-size: 11px;
+            color: #333;
         }
         .title {
             text-align: center;
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
+            margin-bottom: 4px;
         }
         .subtitle {
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             margin-bottom: 10px;
         }
         table {
@@ -24,18 +27,19 @@
             margin-top: 10px;
         }
         th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: center;
-            font-size: 12px;
+            border: 1px solid #000;
+            padding: 5px;
+            font-size: 10px;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #f0f0f0;
         }
         .total {
             font-weight: bold;
             background-color: #f8d7da;
         }
+        .right { text-align: right; }
+        .center { text-align: center; }
     </style>
 </head>
 <body>
@@ -69,28 +73,26 @@
                         $totalGeneral += $subtotal;
                     @endphp
                     <tr>
-                        <td>{{ $count++ }}</td>
+                        <td class="center">{{ $count++ }}</td>
                         <td>{{ $sale->created_at->format('Y-m-d H:i:s') }}</td>
-                        <td>{{ $sale->user->name ?? 'Desconocido' }}</td>
-                        <td>{{ $sale->customer_name }}</td>
+                        <td>{{ optional($sale->user)->name ?? 'Desconocido' }}</td>
+                        <td>{{ optional($sale->client)->name ?? $sale->customer_name ?? 'No registrado' }}</td>
                         <td>{{ $detail->article->name ?? 'Artículo eliminado' }}</td>
-                        <td>{{ $detail->quantity }}</td>
-                        <td>{{ number_format($detail->price, 2, '.', ',') }}</td>
-                        <td>{{ number_format($subtotal, 2, '.', ',') }}</td>
+                        <td class="center">{{ $detail->quantity }}</td>
+                        <td class="right">{{ number_format($detail->price, 2, '.', ',') }}</td>
+                        <td class="right">{{ number_format($subtotal, 2, '.', ',') }}</td>
                     </tr>
                 @endforeach
-                {{-- 🏷️ Total por Venta --}}
                 <tr>
-                    <td colspan="7" class="total">Total Venta:</td>
-                    <td class="total">{{ number_format($saleTotal, 2, '.', ',') }}</td>
+                    <td colspan="7" class="total right">Total Venta:</td>
+                    <td class="total right">{{ number_format($saleTotal, 2, '.', ',') }}</td>
                 </tr>
             @endforeach
         </tbody>
-        {{-- 🏷️ Gran Total General --}}
         <tfoot>
             <tr>
-                <td colspan="7" class="total"><strong>TOTAL GENERAL:</strong></td>
-                <td class="total"><strong>{{ number_format($totalGeneral, 2, '.', ',') }} Bs</strong></td>
+                <td colspan="7" class="total right"><strong>TOTAL GENERAL:</strong></td>
+                <td class="total right"><strong>{{ number_format($totalGeneral, 2, '.', ',') }} Bs</strong></td>
             </tr>
         </tfoot>
     </table>

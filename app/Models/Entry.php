@@ -9,10 +9,14 @@ class Entry extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['supplier_name', 'date', 'total'];
+    protected $fillable = ['provider_id', 'date', 'total'];
 
     public function details()
     {
         return $this->hasMany(EntryDetail::class, 'entry_id');
+    }
+    // app/Models/Entry.php
+    public function provider() {
+        return $this->belongsTo(Person::class, 'provider_id');
     }
 }

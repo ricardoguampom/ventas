@@ -1,30 +1,36 @@
-{{-- resources/views/layouts/master.blade.php --}}
 @extends('adminlte::page')
 
-@section('title', isset($title) ? $title : 'Panel de Administración')
+@section('title', $title ?? 'Panel de Administración')
 
 @section('content_header')
     <h1 class="text-center">@yield('header', 'Dashboard')</h1>
-@stop
+@endsection
 
 @section('content')
     @yield('content')
-@stop
+@endsection
 
 @section('css') 
-    {{-- ✅ Include Flatpickr Styles --}}
+    {{-- Flatpickr --}}
     <link rel="stylesheet" href="{{ asset('vendor/flatpickr/flatpickr.min.css') }}">
+
+    {{-- Select2 --}}
+    <link rel="stylesheet" href="{{ asset('vendor/select2/css/select2.min.css') }}">
+
     @yield('custom_css')
-@stop
+@endsection
 
 @section('js') 
-    {{-- ✅ Include SweetAlert --}}
+    {{-- SweetAlert --}}
     @include('sweetalert::alert')
     <script src="{{ asset('js/sweetalert2.all.min.js') }}"></script> 
 
-    {{-- ✅ Include Flatpickr JS --}}
+    {{-- Flatpickr --}}
     <script src="{{ asset('vendor/flatpickr/flatpickr.min.js') }}"></script>
 
-    {{-- ✅ Allow Custom JS in Child Views --}}
+    {{-- Select2 --}}
+    <script src="{{ asset('vendor/select2/js/select2.min.js') }}"></script>
+
+    {{-- Custom --}}
     @yield('custom_js')
-@stop
+@endsection

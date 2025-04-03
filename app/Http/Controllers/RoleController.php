@@ -26,7 +26,7 @@ class RoleController extends Controller
             ->when($request->filter, fn($query, $filter) =>
                 $query->where('name', 'like', "%$filter%")
             )
-            ->paginate(10);
+            ->paginate(5);
 
         return view('roles.index', compact('roles'));
     }

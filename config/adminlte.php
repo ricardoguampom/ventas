@@ -299,87 +299,73 @@ return [
     | https://github.com/jeroennoten/Laravel-AdminLTE/wiki/Menu-Configuration
     |
     */
-
     'menu' => [
+        // 👥 CLIENTES Y PROVEEDORES
+        ['header' => 'GESTIÓN DE CONTACTOS'],
+
         [
-            'header' => 'GESTIÓN DE INVENTARIO',
+            'text'    => 'Clientes',
+            'icon'    => 'fas fa-users',
+            'url'     => '/clients',
+            'can'     => 'clientes.listar',
         ],
+        [
+            'text'    => 'Proveedores',
+            'icon'    => 'fas fa-truck',
+            'url'     => '/providers',
+            'can'     => 'proveedores.listar',
+        ],
+
+        // 📦 INVENTARIO
+        ['header' => 'GESTIÓN DE INVENTARIO'],
+
         [
             'text'    => 'Inventario',
             'icon'    => 'fas fa-warehouse',
             'submenu' => [
-                [
-                    'text' => 'Categorías',
-                    'url'  => '/categories',
-                    'icon' => 'fas fa-layer-group',
-                    'can'  => 'categorias.listar',
-                ],
-                [
-                    'text' => 'Artículos',
-                    'url'  => '/articles',
-                    'icon' => 'fas fa-box',
-                    'can'  => 'articulos.listar',
-                ],
-                [
-                    'text' => 'Ingresos de Artículos',
-                    'url'  => '/entries',
-                    'icon' => 'fas fa-file-invoice-dollar',
-                    'can'  => 'ingresos.listar',
-                ],
-                [
-                    'text' => 'Reporte de Ingresos',
-                    'url'  => '/entries/reports',
-                    'icon' => 'fas fa-chart-line',
-                    'can'  => 'ingresos.reporte',
-                ],
+                ['text' => 'Categorías',         'url' => '/categories',         'icon' => 'fas fa-layer-group',         'can' => 'categorias.listar'],
+                ['text' => 'Artículos',           'url' => '/articles',           'icon' => 'fas fa-box',                 'can' => 'articulos.listar'],
+                ['text' => 'Ingresos de Artículos','url' => '/entries',           'icon' => 'fas fa-file-invoice-dollar','can' => 'ingresos.listar'],
+                ['text' => 'Importar Ingreso',         'url' => '/entries/importar',  'icon' => 'fas fa-file-import',          'can' => 'ingresos.importar_ingresos'],
+                ['text' => 'Reporte de Ingresos', 'url' => '/entries/reports',    'icon' => 'fas fa-chart-line',         'can' => 'ingresos.reporte'],
             ],
             'submenu_class' => 'nav-collapse',
         ],
 
-        [
-            'header' => 'GESTIÓN DE VENTAS Y COTIZACIONES',
-        ],
+        // 🛒 VENTAS & COTIZACIONES
+        ['header' => 'GESTIÓN DE VENTAS Y COTIZACIONES'],
+
         [
             'text'    => 'Ventas y Cotizaciones',
             'icon'    => 'fas fa-shopping-cart',
             'submenu' => [
-                [
-                    'text' => 'Ventas',
-                    'url'  => '/sales',
-                    'icon' => 'fas fa-hand-holding-usd',
-                    'can'  => 'ventas.listar',
-                ],
-                [
-                    'text' => 'Reportes de Ventas',
-                    'url'  => '/sales/reports',
-                    'icon' => 'fas fa-file-alt',
-                    'can'  => 'ventas.reporte',
-                ],
+                ['text' => 'Ventas',               'url' => '/sales',             'icon' => 'fas fa-hand-holding-usd',   'can' => 'ventas.listar'],
+                ['text' => 'Reportes de Ventas',   'url' => '/sales/reports',     'icon' => 'fas fa-file-alt',           'can' => 'ventas.reporte'],
             ],
             'submenu_class' => 'nav-collapse',
         ],
 
-        [
-            'header' => 'ADMINISTRACIÓN DE USUARIOS',
-        ],
+        // 👤 USUARIOS
+        ['header' => 'ADMINISTRACIÓN DE USUARIOS'],
+
         [
             'text' => 'Gestión de Usuarios',
             'url'  => '/users',
             'icon' => 'fas fa-user',
             'can'  => 'usuarios.listar',
         ],
-        [
-            'header' => 'GESTIÓN DE ACCESOS',
-        ],
+
+        // 🔐 ROLES Y PERMISOS
+        ['header' => 'GESTIÓN DE ACCESOS'],
+
         [
             'text' => 'Roles y Permisos',
             'url'  => '/roles',
             'icon' => 'fas fa-user-shield',
             'can'  => 'roles.listar',
         ],
+
     ],
-
-
     /*
     |--------------------------------------------------------------------------
     | Menu Filters

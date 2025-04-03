@@ -7,7 +7,7 @@
 @endsection
 
 @section('content')
-<div class="card">
+<div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
         <h3 class="card-title mb-2">Lista de Categorías</h3>
         @perm('categorias.crear')
@@ -21,17 +21,17 @@
         {{-- 🔎 Filtros --}}
         <form action="{{ route('categories.index') }}" method="GET" class="row g-2 mb-4">
             <div class="col-md-5">
-                <input type="text" name="search" class="form-control" placeholder="Buscar nombre o descripción" value="{{ request('search') }}">
+                <input type="text" name="search" class="form-control form-control-sm" placeholder="Buscar por nombre o descripción" value="{{ request('search') }}">
             </div>
             <div class="col-md-3">
-                <select name="status" class="form-select">
+                <select name="status" id="status" class="form-select form-select-sm">
                     <option value="">-- Estado --</option>
                     <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Activo</option>
                     <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactivo</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-primary w-100 btn-sm">
                     <i class="fas fa-search"></i> Buscar
                 </button>
             </div>
@@ -56,7 +56,7 @@
                             <td>{{ $category->name }}</td>
                             <td>{{ $category->description ?? 'Sin descripción' }}</td>
                             <td>
-                                <span class="badge rounded-pill {{ $category->status ? 'bg-success' : 'bg-danger' }} px-3 py-2">
+                                <span class="badge rounded-pill {{ $category->status ? 'bg-success' : 'bg-danger' }}">
                                     <i class="fas {{ $category->status ? 'fa-check-circle' : 'fa-times-circle' }} me-1"></i>
                                     {{ $category->status ? 'Activo' : 'Inactivo' }}
                                 </span>
@@ -93,7 +93,7 @@
     </div>
 </div>
 
-{{-- 🗑 Modal de Confirmación --}}
+{{-- Modal --}}
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <form id="deleteForm" method="POST" class="modal-content">
@@ -117,23 +117,26 @@
 
 @section('custom_js')
 <script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const deleteForm = document.getElementById('deleteForm');
+    $(function() {
+        $('#status').select2({
+            placeholder: '-- Estado --',
+            allowClear: true,
+            width: '100%'
+        });
 
         document.querySelectorAll('.delete-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                deleteForm.action = btn.getAttribute('data-url');
+                document.getElementById('deleteForm').action = btn.getAttribute('data-url');
             });
         });
 
-        const success = "{{ session('success') }}";
-        const error = "{{ session('error') }}";
+        const success = @json(session('success'));
+        const error = @json(session('error'));
 
-        if (success) {
+        if(success){
             Swal.fire('Éxito', success, 'success');
         }
-
-        if (error) {
+        if(error){
             Swal.fire('Error', error, 'error');
         }
     });

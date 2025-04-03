@@ -12,7 +12,7 @@ class Sale extends Model
 
     protected $fillable = [
         'user_id',
-        'customer_name',
+        'client_id', // ✅ Nuevo campo
         'total',
         'invoice_number',
         'status',
@@ -39,6 +39,10 @@ class Sale extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function client()
+    {
+        return $this->belongsTo(Person::class, 'client_id');
+    }
     /**
      * Generar un nuevo número de factura único.
      */

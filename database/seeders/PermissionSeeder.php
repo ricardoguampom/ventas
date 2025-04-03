@@ -14,51 +14,66 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-             // 📦 Categorías
-             'categorias.crear' => 'Crear categorías',
-             'categorias.listar' => 'Listar categorías',
-             'categorias.editar' => 'Editar categorías',
-             'categorias.eliminar' => 'Eliminar categorías',
+            // 📦 Categorías
+            'categorias.crear' => 'Crear categorías',
+            'categorias.listar' => 'Listar categorías',
+            'categorias.editar' => 'Editar categorías',
+            'categorias.eliminar' => 'Eliminar categorías',
  
-             // 📦 Artículos
-             'articulos.crear' => 'Crear artículos',
-             'articulos.listar' => 'Listar artículos',
-             'articulos.ver' => 'Ver artículos',
-             'articulos.editar' => 'Editar artículos',
-             'articulos.eliminar' => 'Eliminar artículos',
-             'articulos.reporte_exportar' => 'Exportar reporte de artículos',
-             'articulos.ver_inversion' => 'Ver total inversión de artículos',
+            // 📦 Artículos
+            'articulos.crear' => 'Crear artículos',
+            'articulos.listar' => 'Listar artículos',
+            'articulos.ver' => 'Ver artículos',
+            'articulos.editar' => 'Editar artículos',
+            'articulos.eliminar' => 'Eliminar artículos',
+            'articulos.reporte_exportar' => 'Exportar reporte de artículos',
+            'articulos.ver_inversion' => 'Ver total inversión de artículos',
+
+            // 👥 Proveedores
+            'proveedores.listar' => 'Listar proveedores',
+            'proveedores.ver' => 'Ver proveedores',
+            'proveedores.crear' => 'Crear proveedores',
+            'proveedores.editar' => 'Editar proveedores',
+            'proveedores.eliminar' => 'Eliminar proveedores',
+
+            // 📥 Ingresos
+            'ingresos.crear' => 'Crear ingresos',
+            'ingresos.listar' => 'Listar ingresos',
+            'ingresos.ver' => 'Ver ingresos',
+            'ingresos.editar' => 'Editar ingresos',
+            'ingresos.eliminar' => 'Eliminar ingresos',
+            'ingresos.reporte' => 'Generar reporte de ingresos',
+            'ingresos.importar_ingresos' => 'Importar Ingresos',
  
-             // 📥 Ingresos
-             'ingresos.crear' => 'Crear ingresos',
-             'ingresos.listar' => 'Listar ingresos',
-             'ingresos.ver' => 'Ver ingresos',
-             'ingresos.editar' => 'Editar ingresos',
-             'ingresos.eliminar' => 'Eliminar ingresos',
-             'ingresos.reporte' => 'Generar reporte de ingresos',
+            // 👥 Clientes
+            'clientes.listar' => 'Listar clientes',
+            'clientes.ver' => 'Ver clientes',
+            'clientes.crear' => 'Crear clientes',
+            'clientes.editar' => 'Editar clientes',
+            'clientes.eliminar' => 'Eliminar clientes',
+
+            // 🛒 Ventas
+            'ventas.crear' => 'Crear ventas',
+            'ventas.listar' => 'Listar ventas',
+            'ventas.ver' => 'Ver ventas',
+            'ventas.editar' => 'Editar ventas',
+            'ventas.eliminar' => 'Eliminar ventas',
+            'ventas.reporte' => 'Generar reporte de ventas',
+
+            // 👥 Usuarios
+            'usuarios.listar' => 'Listar usuarios',
+            'usuarios.ver' => 'Ver usuarios',
+            'usuarios.crear' => 'Crear usuarios',
+            'usuarios.editar' => 'Editar usuarios',
+            'usuarios.eliminar' => 'Eliminar usuarios',
  
-             // 🛒 Ventas
-             'ventas.crear' => 'Crear ventas',
-             'ventas.listar' => 'Listar ventas',
-             'ventas.ver' => 'Ver ventas',
-             'ventas.editar' => 'Editar ventas',
-             'ventas.eliminar' => 'Eliminar ventas',
-             'ventas.reporte' => 'Generar reporte de ventas',
- 
-             // 👥 Usuarios
-             'usuarios.listar' => 'Listar usuarios',
-             'usuarios.ver' => 'Ver usuarios',
-             'usuarios.crear' => 'Crear usuarios',
-             'usuarios.editar' => 'Editar usuarios',
-             'usuarios.eliminar' => 'Eliminar usuarios',
- 
-             // 🔐 Roles
-             'roles.listar' => 'Listar roles',
-             'roles.ver' => 'Ver roles',
-             'roles.crear' => 'Ver roles',
-             'roles.verUsuarios' => 'Ver Usuarios',
-             'roles.editar' => 'Editar roles',
-             'roles.eliminar' => 'Eliminar roles',
+            // 🔐 Roles
+            'roles.listar' => 'Listar roles',
+            'roles.ver' => 'Ver roles',
+            'roles.crear' => 'Ver roles',
+            'roles.verUsuarios' => 'Ver Usuarios',
+            'roles.editar' => 'Editar roles',
+            'roles.eliminar' => 'Eliminar roles',
         ];
 
         

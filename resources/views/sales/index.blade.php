@@ -70,7 +70,7 @@
                             <tr id="sale-row-{{ $sale->id }}">
                                 <td>{{ $sale->id }}</td>
                                 <td>{{ $sale->created_at->format('Y-m-d H:i:s') }}</td>
-                                <td>{{ $sale->customer_name }}</td>
+                                <td>{{ $sale->client->name ?? 'Sin cliente' }}</td>
                                 <td>{{ $sale->invoice_number }}</td>
                                 <td>Bs {{ number_format($sale->total, 2) }}</td>
                                 <td>
